@@ -193,3 +193,107 @@ function hcle_handle_enrollment_save() {
 	exit;
 }
 add_action( 'admin_init', 'hcle_handle_enrollment_save' );
+
+/**
+ * Builds a unique user_login from an email local-part.
+ *
+ * @param string $email Email address.
+ * @return string
+ */
+function hcle_unique_login_from_email( $email ) {
+	$parts = explode( '@', $email );
+	$base  = sanitize_user( $parts[0], true );
+	if ( '' === $base ) {
+		$base = 'student';
+	}
+	$login = $base;
+	$i     = 1;
+	while ( username_exists( $login ) ) {
+		$login = $base . $i;
+		++$i;
+	}
+	return $login;
+}
+
+/**
+ * Bulk-enrolls a cohort from a list of emails (Participants screen).
+ *
+ * Instructors can enroll EXISTING students by email. Admins (create_users) can
+ * also create accounts for unknown emails and send them a set-password email.
+ */
+function hcle_handle_bulk_enroll() {
+	if ( empty( $_POST['hcle_bulk_nonce'] ) ) {
+		return;
+	}
+	if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['hcle_bulk_nonce'] ) ), 'hcle_bulk_enroll' ) ) {
+		return;
+	}
+	if ( ! current_user_can( 'view_participant_progress' ) ) {
+		return;
+	}
+
+	$program_id = isset( $_POST['hcle_bulk_program'] ) ? absint( $_POST['hcle_bulk_program'] ) : 0;
+	if ( 'hcle_program' !== get_post_type( $program_id ) ) {
+		return;
+	}
+
+	$raw    = isset( $_POST['hcle_bulk_emails'] ) ? sanitize_textarea_field( wp_unslash( $_POST['hcle_bulk_emails'] ) ) : '';
+	$create = ! empty( $_POST['hcle_bulk_create'] ) && current_user_can( 'create_users' );
+
+	$emails   = array_filter( array_unique( array_map( 'trim', preg_split( '/[\s,;]+/', $raw ) ) ) );
+	$enrolled = 0;
+	$created  = 0;
+	$skipped  = 0;
+
+	foreach ( $emails as $email ) {
+		$email = sanitize_email( $email );
+		if ( ! is_email( $email ) ) {
+			++$skipped;
+			continue;
+		}
+
+		$user = get_user_by( 'email', $email );
+		if ( ! $user ) {
+			if ( ! $create ) {
+				++$skipped; // Unknown email and we're not allowed to create accounts.
+				continue;
+			}
+			$uid = wp_insert_user(
+				array(
+					'user_login' => hcle_unique_login_from_email( $email ),
+					'user_email' => $email,
+					'user_pass'  => wp_generate_password( 20 ),
+					'role'       => 'hcle_student',
+				)
+			);
+			if ( is_wp_error( $uid ) ) {
+				++$skipped;
+				continue;
+			}
+			++$created;
+			wp_send_new_user_notifications( $uid, 'user' ); // Set-password / welcome email.
+			$user_id = (int) $uid;
+		} else {
+			$user_id = (int) $user->ID;
+		}
+
+		hcle_enroll_user( $program_id, $user_id );
+		++$enrolled;
+	}
+
+	wp_safe_redirect(
+		add_query_arg(
+			array(
+				'page'         => 'habeas-cle-progress',
+				'program'      => $program_id,
+				'hcle_message' => 'bulk_done',
+				'enrolled'     => $enrolled,
+				'created'      => $created,
+				'skipped'      => $skipped,
+			),
+			admin_url( 'admin.php' )
+		)
+	);
+	exit;
+}
+add_action( 'admin_init', 'hcle_handle_bulk_enroll' );

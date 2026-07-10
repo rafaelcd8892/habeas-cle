@@ -17,10 +17,11 @@ Reference document for the internal design of Habeas CLE.
 | `includes/roles.php` | Creates roles and assigns capabilities. |
 | `includes/access-control.php` | Login gate + per-program access + REST protection + `[hcle_model_answer]`. |
 | `includes/relationships.php` | Hierarchy via post meta + query helpers. |
-| `includes/enrollment.php` | Per-program enrollment (user meta) + form save. |
+| `includes/enrollment.php` | Per-program enrollment (user meta) + form save + bulk enroll. |
 | `includes/progress.php` | Progress (user meta) + REST + render + participants screen. |
 | `includes/event-meta.php` | Schedule Event date/time. |
 | `includes/blocks.php` | Dynamic blocks + front door + breadcrumbs. |
+| `includes/protected-files.php` | Protected upload storage + guarded download endpoint. |
 | `uninstall.php` | Removes roles on uninstall. |
 | `bin/seed-demo.php` | Sample data (idempotent). |
 | `bin/setup-front-door.php` | Creates the "My Training" page + menu link. |
@@ -77,6 +78,8 @@ The gate `hcle_guard_protected_content()` (hook `template_redirect`):
 
 **Model answers:** the `[hcle_model_answer]` shortcode **does not render** the content for users without `reveal_model_answers` (server-side protection, not CSS hiding).
 
+**REST:** the CPTs are `show_in_rest` (for the block editor), so their published items would otherwise be readable by anyone via `/wp-json/`. `hcle_guard_rest_reads()` (hook `rest_pre_dispatch`) enforces per-program access on GET reads of the CPT routes: anonymous → 401, non-enrolled → 403, enrolled/staff → 200. (Note: there is no core `rest_{$post_type}_item_permissions_check` filter — an earlier version hooked that name and was a no-op.)
+
 ## 4. Hierarchical relationships
 
 Modeled with **post meta** (not `post_parent`, which doesn't cross post types). Map in `hcle_relationship_map()`:
@@ -104,7 +107,9 @@ MVP via **user meta** `_hcle_completed_modules` (array of module IDs). Week/prog
 
 ## 6. Enrollment
 
-User meta `_hcle_enrolled_programs` (array of program IDs). Helpers in `enrollment.php`. Managed from the **Participants & Enrollment** screen (checkbox per student, saved with a nonce on `admin_init`).
+User meta `_hcle_enrolled_programs` (array of program IDs). Helpers in `enrollment.php`. Managed from the **Participants & Enrollment** screen: a checkbox per student, plus **bulk enroll by email** (paste a cohort's emails; admins with `create_users` also create Student accounts for unknown emails and send a set-password email). Saved with nonces on `admin_init`.
+
+> Production enrollment will be **payment-driven** — see [ROADMAP.md](ROADMAP.md). The design keeps `hcle_enroll_user()` as the single enrollment primitive that a payment "bridge" calls, so payments stay decoupled and swappable.
 
 ## 7. Dynamic blocks (server-rendered, no build step)
 
@@ -124,6 +129,24 @@ User meta `_hcle_enrolled_programs` (array of program IDs). Helpers in `enrollme
 Child theme of **Twenty Twenty-Five**. Presentation only:
 - `style.css` (styles) + `functions.php` (enqueues the stylesheet).
 - 7 `single-hcle_*.html` templates combining native blocks (`post-title`, `post-content`) with the plugin's dynamic blocks.
+
+## 9. Protected files
+
+WordPress serves `wp-content/uploads/` directly through the web server, bypassing
+PHP — so raw URLs to Template PDFs / briefs would be downloadable by anyone. To
+close that:
+
+- Files uploaded while editing a CLE post are routed to `uploads/hcle-protected/`
+  (an `upload_dir` filter keyed on the parent post type).
+- Access goes through a guarded endpoint `?hcle_download=<attachment_id>` which
+  checks `hcle_can_access_post()` for the file's parent, then streams the file
+  with a path-traversal guard.
+- `wp_get_attachment_url` is filtered so protected files' URLs point to the
+  endpoint — the raw path is never surfaced.
+- The directory carries an `.htaccess` deny (Apache) + `index.php`. On **nginx**
+  add the documented `location` rule (see [DEVELOPMENT.md](DEVELOPMENT.md)).
+
+See `includes/protected-files.php`.
 
 ## Storage keys summary
 

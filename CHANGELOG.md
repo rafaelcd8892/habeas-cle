@@ -4,6 +4,28 @@ All notable changes to Habeas CLE.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses semantic versioning.
 
+## [Unreleased] — Pilot-ready hardening
+
+### Security
+
+- **Protected file delivery.** Files attached to CLE content are stored in
+  `uploads/hcle-protected/` and served only through a guarded endpoint
+  (`?hcle_download=<id>`) that enforces per-program access; attachment URLs are
+  rewritten to that endpoint so the raw path is never exposed. Includes an
+  `.htaccess` deny (Apache) and a documented nginx rule. (`includes/protected-files.php`)
+- **Fixed an ineffective REST guard.** The previous guard hooked a non-existent
+  `rest_{$post_type}_item_permissions_check` filter (a no-op), leaving published
+  CPT items readable via `/wp-json/` by anyone. Replaced with a `rest_pre_dispatch`
+  guard enforcing per-program access on reads. Verified: anonymous → 401,
+  non-enrolled student → 403, enrolled student/staff → 200.
+
+### Added
+
+- **Bulk enrollment by email** on the Participants & Enrollment screen: paste a
+  list of emails to enroll a cohort at once. Administrators can create Student
+  accounts for unknown emails (with a set-password email); instructors enroll
+  existing students only.
+
 ## [0.1.0] — 2026-06-23
 
 First functional release. Implements every feature from the brief.

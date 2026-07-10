@@ -452,9 +452,25 @@ function hcle_render_progress_admin_page() {
 		return;
 	}
 
-	// Notice after saving enrollment.
-	if ( isset( $_GET['hcle_message'] ) && 'enrollment_saved' === $_GET['hcle_message'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	// Notices after saving / bulk enrolling.
+	$message = isset( $_GET['hcle_message'] ) ? sanitize_key( $_GET['hcle_message'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	if ( 'enrollment_saved' === $message ) {
 		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Enrollment updated.', 'habeas-cle' ) . '</p></div>';
+	} elseif ( 'bulk_done' === $message ) {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
+		$n_enrolled = isset( $_GET['enrolled'] ) ? absint( $_GET['enrolled'] ) : 0;
+		$n_created  = isset( $_GET['created'] ) ? absint( $_GET['created'] ) : 0;
+		$n_skipped  = isset( $_GET['skipped'] ) ? absint( $_GET['skipped'] ) : 0;
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+		echo '<div class="notice notice-success is-dismissible"><p>';
+		printf(
+			/* translators: 1: enrolled count, 2: created count, 3: skipped count. */
+			esc_html__( 'Bulk enrollment done: %1$d enrolled, %2$d new accounts created, %3$d skipped.', 'habeas-cle' ),
+			(int) $n_enrolled,
+			(int) $n_created,
+			(int) $n_skipped
+		);
+		echo '</p></div>';
 	}
 
 	// Program selector (GET).
@@ -472,6 +488,26 @@ function hcle_render_progress_admin_page() {
 	}
 	echo '</select>';
 	echo '</form>';
+
+	// Bulk enroll by email.
+	$can_create = current_user_can( 'create_users' );
+	echo '<div class="card" style="max-width:720px;padding:0 1.25rem 1rem;">';
+	echo '<h2>' . esc_html__( 'Bulk enroll by email', 'habeas-cle' ) . '</h2>';
+	echo '<form method="post" action="' . esc_url( admin_url( 'admin.php?page=habeas-cle-progress' ) ) . '">';
+	wp_nonce_field( 'hcle_bulk_enroll', 'hcle_bulk_nonce' );
+	printf( '<input type="hidden" name="hcle_bulk_program" value="%d" />', (int) $selected );
+	echo '<p><textarea name="hcle_bulk_emails" rows="5" style="width:100%;" placeholder="' . esc_attr__( 'One email per line (or comma-separated)', 'habeas-cle' ) . '"></textarea></p>';
+	if ( $can_create ) {
+		echo '<p><label><input type="checkbox" name="hcle_bulk_create" value="1" checked /> '
+			. esc_html__( 'Create a Student account for unknown emails and send them a set-password email.', 'habeas-cle' )
+			. '</label></p>';
+	} else {
+		echo '<p class="description">' . esc_html__( 'Unknown emails will be skipped (only administrators can create accounts).', 'habeas-cle' ) . '</p>';
+	}
+	echo '<p><button type="submit" class="button button-primary">' . esc_html__( 'Enroll emails', 'habeas-cle' ) . '</button> ';
+	echo '<span class="description">' . esc_html__( 'Enrolls the emails into the selected program above.', 'habeas-cle' ) . '</span></p>';
+	echo '</form>';
+	echo '</div>';
 
 	$students = hcle_get_program_students(); // All CLE Students.
 

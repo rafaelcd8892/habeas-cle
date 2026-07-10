@@ -95,6 +95,27 @@ echo (defined("SECURE_AUTH_COOKIE")?SECURE_AUTH_COOKIE:AUTH_COOKIE)."=".wp_gener
 # Then: curl -H "Cookie: <the above>" http://tps.local/program/...
 ```
 
+## Protected files (uploads)
+
+Files uploaded while editing a CLE post are stored in `wp-content/uploads/hcle-protected/`
+and served only through the guarded endpoint `?hcle_download=<attachment_id>`, which
+checks per-program access before streaming. Attachment URLs for these files are
+rewritten to that endpoint automatically.
+
+Direct HTTP access to the raw path is blocked by an `.htaccess` on **Apache**. On
+**nginx** (Local, and many managed hosts) add this rule to the server block:
+
+```nginx
+location ^~ /wp-content/uploads/hcle-protected/ {
+    deny all;
+    return 404;
+}
+```
+
+Without it, nginx would still serve the raw file if the exact URL is guessed — the
+endpoint + URL rewriting hide it, but the server rule is what truly blocks it. Add
+the rule before the first real pilot.
+
 ## Code conventions
 
 - `hcle_` prefix on functions; `HCLE_` on constants.

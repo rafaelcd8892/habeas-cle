@@ -34,7 +34,8 @@ habeas-cle/
 ├── docs/          → documentation
 │   ├── ARCHITECTURE.md   → data model and technical design
 │   ├── DEVELOPMENT.md    → local setup, scripts, commands
-│   └── USER-GUIDE.md     → manual for administrators and instructors
+│   ├── USER-GUIDE.md     → manual for administrators and instructors
+│   └── ROADMAP.md        → viability audit, hardening status, payments milestone
 ├── bin/
 │   └── sync.sh    → syncs the repo ↔ the Local install
 ├── CHANGELOG.md

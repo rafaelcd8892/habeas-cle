@@ -34,6 +34,7 @@ require_once HABEAS_CLE_PLUGIN_DIR . 'includes/enrollment.php';
 require_once HABEAS_CLE_PLUGIN_DIR . 'includes/progress.php';
 require_once HABEAS_CLE_PLUGIN_DIR . 'includes/blocks.php';
 require_once HABEAS_CLE_PLUGIN_DIR . 'includes/event-meta.php';
+require_once HABEAS_CLE_PLUGIN_DIR . 'includes/protected-files.php';
 
 /*
  * --------------------------------------------------------------------------
@@ -44,8 +45,9 @@ require_once HABEAS_CLE_PLUGIN_DIR . 'includes/event-meta.php';
  * which is why it ONLY runs on activation, never on every page load.
  */
 function hcle_activate() {
-	hcle_register_roles();      // defined in includes/roles.php
-	hcle_register_post_types(); // defined in includes/post-types.php
+	hcle_register_roles();       // defined in includes/roles.php
+	hcle_register_post_types();  // defined in includes/post-types.php
+	hcle_ensure_protected_dir(); // defined in includes/protected-files.php
 	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'hcle_activate' );

@@ -137,41 +137,67 @@ function hcle_guard_protected_content() {
 add_action( 'template_redirect', 'hcle_guard_protected_content' );
 
 /**
- * Extra hardening for the REST API.
+ * Guards REST reads of the CLE CPTs.
  *
- * Since the CPTs have show_in_rest => true (for the block editor), we make sure
- * an anonymous user cannot read them via /wp-json/. WordPress already requires
- * read_private_* for drafts, but this also closes off published ones.
+ * The CPTs are publicly_queryable + show_in_rest (needed for the block editor),
+ * so the default REST controller treats their PUBLISHED items as readable by
+ * anyone. Without this, /wp-json/wp/v2/hcle_program/… would leak curriculum
+ * content to anonymous users. We intercept GET requests to our CPT routes and
+ * enforce the same per-program access as the front end.
  *
- * @param true|WP_Error   $allowed Previous permission result.
- * @param WP_REST_Request $request Incoming REST request.
- * @return true|WP_Error
+ * Uses `rest_pre_dispatch` (a real core filter). Note: there is no core
+ * `rest_{$post_type}_item_permissions_check` filter — hooking that name is a
+ * no-op, which is exactly the gap this replaces.
+ *
+ * @param mixed           $result  Pre-dispatch result (WP_Error short-circuits).
+ * @param WP_REST_Server  $server  Server instance.
+ * @param WP_REST_Request $request Incoming request.
+ * @return mixed
  */
-function hcle_protect_rest_reads( $allowed, $request ) {
-	if ( is_wp_error( $allowed ) ) {
-		return $allowed;
+function hcle_guard_rest_reads( $result, $server, $request ) {
+	if ( is_wp_error( $result ) || 'GET' !== $request->get_method() ) {
+		return $result;
 	}
 
-	if ( hcle_user_can_access() || current_user_can( 'edit_posts' ) ) {
-		return $allowed;
+	$route = $request->get_route();
+
+	foreach ( hcle_protected_post_types() as $post_type ) {
+		$obj     = get_post_type_object( $post_type );
+		$base    = ( $obj && ! empty( $obj->rest_base ) ) ? $obj->rest_base : $post_type;
+		$pattern = '#^/wp/v2/' . preg_quote( $base, '#' ) . '(?:/(?P<id>\d+))?/?$#';
+
+		if ( ! preg_match( $pattern, $route, $m ) ) {
+			continue;
+		}
+
+		// Single item → enforce per-program access (staff pass inside the helper).
+		if ( isset( $m['id'] ) ) {
+			return hcle_can_access_post( (int) $m['id'] ) ? $result : hcle_rest_forbidden();
+		}
+
+		// Collection listing → require at least a participant (or an editor).
+		if ( hcle_user_can_access() || current_user_can( 'edit_posts' ) ) {
+			return $result;
+		}
+		return hcle_rest_forbidden();
 	}
 
+	return $result;
+}
+add_filter( 'rest_pre_dispatch', 'hcle_guard_rest_reads', 10, 3 );
+
+/**
+ * The standard "forbidden" REST error for CLE content.
+ *
+ * @return WP_Error
+ */
+function hcle_rest_forbidden() {
 	return new WP_Error(
 		'hcle_rest_forbidden',
 		__( 'You must be enrolled to access this content.', 'habeas-cle' ),
 		array( 'status' => rest_authorization_required_code() )
 	);
 }
-
-/**
- * Hooks the REST protection onto each protected CPT.
- */
-function hcle_register_rest_guards() {
-	foreach ( hcle_protected_post_types() as $post_type ) {
-		add_filter( "rest_{$post_type}_item_permissions_check", 'hcle_protect_rest_reads', 10, 2 );
-	}
-}
-add_action( 'rest_api_init', 'hcle_register_rest_guards' );
 
 /**
  * Shortcode [hcle_model_answer]...[/hcle_model_answer].
