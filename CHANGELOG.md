@@ -25,6 +25,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and the proje
   list of emails to enroll a cohort at once. Administrators can create Student
   accounts for unknown emails (with a set-password email); instructors enroll
   existing students only.
+- **Smoke test suite** (`tests/smoke-test.php`) — dependency-free tests covering
+  access control, enrollment, progress, relationships, protected files, and the
+  REST guard (36 assertions). Non-zero exit on failure for CI.
 
 ## [0.1.0] — 2026-06-23
 

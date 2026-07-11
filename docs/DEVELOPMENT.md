@@ -67,6 +67,21 @@ Creates the **My Training** page (`/my-training/`) with the `my-programs` block 
 "$PHP" -d mysqli.default_socket="$SOCK" wp-content/plugins/habeas-cle/bin/setup-front-door.php
 ```
 
+## Tests
+
+Dependency-free smoke tests (no PHPUnit/composer needed) cover the critical
+paths — access control, enrollment, progress, relationships, protected files,
+and the REST guard. They boot WordPress, create isolated fixtures, assert, and
+clean up. Exit code is non-zero on failure, so they can gate CI later.
+
+```bash
+"$PHP" -d mysqli.default_socket="$SOCK" wp-content/plugins/habeas-cle/tests/smoke-test.php
+echo "exit=$?"   # 0 = all passed, 1 = a test failed
+```
+
+> Upgrade path (Option C): migrate these to WP-PHPUnit (`WP_UnitTestCase`) with a
+> dedicated test database and run them in CI. See [ROADMAP.md](ROADMAP.md).
+
 ## Syncing repo ↔ live site
 
 Because the repo is a snapshot, use `bin/sync.sh`:
