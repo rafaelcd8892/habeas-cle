@@ -59,6 +59,18 @@ function hcle_section( $name ) {
 	echo "\n{$name}\n";
 }
 
+// Capture outgoing mail instead of sending it (no MTA on dev; keeps tests quiet).
+$GLOBALS['hcle_mail'] = array();
+add_filter(
+	'pre_wp_mail',
+	function ( $null, $atts ) {
+		$GLOBALS['hcle_mail'][] = $atts;
+		return true;
+	},
+	10,
+	2
+);
+
 /* ------------------------------------------------------------------ */
 /* Fixtures                                                            */
 /* ------------------------------------------------------------------ */
@@ -212,6 +224,34 @@ hcle_eq( hcle_rest_status( $student, "/wp/v2/hcle_program/{$prog_a}" ), 200, 'en
 hcle_eq( hcle_rest_status( $student, "/wp/v2/hcle_program/{$prog_b}" ), 403, 'non-enrolled student REST read → 403' );
 hcle_eq( hcle_rest_status( $admin, "/wp/v2/hcle_program/{$prog_b}" ), 200, 'staff REST read → 200' );
 wp_set_current_user( 0 );
+
+/* ------------------------------------------------------------------ */
+/* 7) Emails                                                          */
+/* ------------------------------------------------------------------ */
+hcle_section( '# Emails' );
+$before = count( $GLOBALS['hcle_mail'] );
+hcle_enroll_user( $prog_b, $student ); // student not yet in program B
+hcle_eq( count( $GLOBALS['hcle_mail'] ) - $before, 1, 'new enrollment fires one confirmation email' );
+$last_mail = end( $GLOBALS['hcle_mail'] );
+hcle_ok( false !== strpos( $last_mail['subject'], 'TEST Program B' ), 'enrollment email subject names the program' );
+
+$before = count( $GLOBALS['hcle_mail'] );
+hcle_enroll_user( $prog_b, $student ); // already enrolled
+hcle_eq( count( $GLOBALS['hcle_mail'] ) - $before, 0, 're-enroll does not resend' );
+
+$rem_event       = hcle_make_post( 'hcle_event', 'TEST Session', array( '_hcle_week_id' => $week ) );
+$created_posts[] = $rem_event;
+$rdt = new DateTime( 'now', wp_timezone() );
+$rdt->modify( '+2 hours' );
+update_post_meta( $rem_event, '_hcle_event_datetime', $rdt->format( 'Y-m-d H:i:s' ) );
+
+$before = count( $GLOBALS['hcle_mail'] );
+hcle_send_session_reminders();
+hcle_eq( count( $GLOBALS['hcle_mail'] ) - $before, 1, 'session reminder emails the enrolled student' );
+
+$before = count( $GLOBALS['hcle_mail'] );
+hcle_send_session_reminders();
+hcle_eq( count( $GLOBALS['hcle_mail'] ) - $before, 0, 'reminder is de-duplicated on re-run' );
 
 /* ------------------------------------------------------------------ */
 /* Teardown                                                           */

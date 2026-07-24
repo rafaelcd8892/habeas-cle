@@ -26,8 +26,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and the proje
   accounts for unknown emails (with a set-password email); instructors enroll
   existing students only.
 - **Smoke test suite** (`tests/smoke-test.php`) — dependency-free tests covering
-  access control, enrollment, progress, relationships, protected files, and the
-  REST guard (36 assertions). Non-zero exit on failure for CI.
+  access control, enrollment, progress, relationships, protected files, the REST
+  guard, and emails (41 assertions). Non-zero exit on failure for CI.
+- **Transactional emails** (`includes/emails.php`): enrollment confirmation (via
+  the new `hcle_user_enrolled` action, fired only on genuinely new enrollments)
+  and a WP-Cron **session reminder** for live sessions within the next 24h
+  (de-duplicated per event date). Subjects/bodies filterable. Sending uses
+  `wp_mail` — configure SMTP on the host for deliverability.
+- **Health check endpoint** (`includes/health.php`):
+  `GET /wp-json/habeas-cle/v1/health` returns `{status, version}` publicly, plus
+  configuration `checks` (roles, cron, protected dir, front door) for admins.
+  For deploy verification and uptime monitoring.
+- **Deployment runbook** ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)) — Local →
+  production steps and a go-live checklist.
 
 ## [0.1.0] — 2026-06-23
 

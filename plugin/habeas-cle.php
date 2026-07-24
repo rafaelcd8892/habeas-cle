@@ -35,6 +35,8 @@ require_once HABEAS_CLE_PLUGIN_DIR . 'includes/progress.php';
 require_once HABEAS_CLE_PLUGIN_DIR . 'includes/blocks.php';
 require_once HABEAS_CLE_PLUGIN_DIR . 'includes/event-meta.php';
 require_once HABEAS_CLE_PLUGIN_DIR . 'includes/protected-files.php';
+require_once HABEAS_CLE_PLUGIN_DIR . 'includes/emails.php';
+require_once HABEAS_CLE_PLUGIN_DIR . 'includes/health.php';
 
 /*
  * --------------------------------------------------------------------------
@@ -45,9 +47,10 @@ require_once HABEAS_CLE_PLUGIN_DIR . 'includes/protected-files.php';
  * which is why it ONLY runs on activation, never on every page load.
  */
 function hcle_activate() {
-	hcle_register_roles();       // defined in includes/roles.php
-	hcle_register_post_types();  // defined in includes/post-types.php
-	hcle_ensure_protected_dir(); // defined in includes/protected-files.php
+	hcle_register_roles();          // defined in includes/roles.php
+	hcle_register_post_types();     // defined in includes/post-types.php
+	hcle_ensure_protected_dir();    // defined in includes/protected-files.php
+	hcle_schedule_reminder_cron();  // defined in includes/emails.php
 	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'hcle_activate' );
@@ -58,6 +61,7 @@ register_activation_hook( __FILE__, 'hcle_activate' );
  * participants' role assignments. That happens in uninstall.php.
  */
 function hcle_deactivate() {
+	hcle_clear_reminder_cron(); // defined in includes/emails.php
 	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'hcle_deactivate' );

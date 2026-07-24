@@ -35,7 +35,8 @@ habeas-cle/
 │   ├── ARCHITECTURE.md   → data model and technical design
 │   ├── DEVELOPMENT.md    → local setup, scripts, commands
 │   ├── USER-GUIDE.md     → manual for administrators and instructors
-│   └── ROADMAP.md        → viability audit, hardening status, payments milestone
+│   ├── ROADMAP.md        → viability audit, hardening status, payments milestone
+│   └── DEPLOYMENT.md     → Local → production runbook and go-live checklist
 ├── bin/
 │   └── sync.sh    → syncs the repo ↔ the Local install
 ├── CHANGELOG.md

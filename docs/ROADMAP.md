@@ -59,9 +59,9 @@ Goal: run the first real 4-week cohort safely.
 | 1 | Protected file delivery | ✅ done + verified E2E |
 | 2 | Per-program REST guard (fix the no-op) | ✅ done + verified E2E |
 | 3 | Bulk enrollment by email | ✅ done + verified |
-| 4 | Emails (enrollment confirmation + session reminder) | ⏳ pending (needs SMTP/host to test send) |
+| 4 | Emails (enrollment confirmation + session reminder) | ✅ done (`includes/emails.php`); verified via wp_mail capture. Needs SMTP on the host for real delivery. |
 | 5 | Smoke tests on access-control, progress, files, REST | ✅ done (`tests/smoke-test.php`, 36 assertions, dependency-free) |
-| 6 | Deploy prep (host, backups, staging, health check) | ⏳ pending (infra is owner-driven) |
+| 6 | Deploy prep (health check + runbook) | ✅ done (`includes/health.php` + [DEPLOYMENT.md](DEPLOYMENT.md)); host/backups/DNS remain owner-driven |
 
 ---
 

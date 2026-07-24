@@ -22,6 +22,8 @@ Reference document for the internal design of Habeas CLE.
 | `includes/event-meta.php` | Schedule Event date/time. |
 | `includes/blocks.php` | Dynamic blocks + front door + breadcrumbs. |
 | `includes/protected-files.php` | Protected upload storage + guarded download endpoint. |
+| `includes/emails.php` | Enrollment confirmation + WP-Cron session reminders. |
+| `includes/health.php` | REST health-check endpoint for deploy/uptime checks. |
 | `uninstall.php` | Removes roles on uninstall. |
 | `bin/seed-demo.php` | Sample data (idempotent). |
 | `bin/setup-front-door.php` | Creates the "My Training" page + menu link. |
@@ -148,6 +150,23 @@ close that:
 
 See `includes/protected-files.php`.
 
+## 10. Emails
+
+Two transactional notifications (`includes/emails.php`), sent via `wp_mail`:
+
+- **Enrollment confirmation** — hooked to `do_action( 'hcle_user_enrolled', $program_id, $user_id )`,
+  which `hcle_enroll_user()` fires **only on a genuinely new enrollment** (so
+  re-saving the participants screen doesn't resend). The same hook is the
+  intended entry point for the future payment → enrollment bridge.
+- **Session reminders** — a WP-Cron job (`hcle_session_reminder_cron`, hourly)
+  emails the enrolled students of any live session within the next window
+  (default 24h, filter `hcle_reminder_window`). De-duplicated per event date via
+  `_hcle_reminder_sent` (rescheduling re-arms it). Scheduled on activation,
+  cleared on deactivation.
+
+Subjects/bodies/headers are filterable. **Deliverability:** `wp_mail` needs a
+mailer — configure SMTP on the production host.
+
 ## Storage keys summary
 
 | Key | Type | Use |
@@ -156,5 +175,6 @@ See `includes/protected-files.php`.
 | `_hcle_event_datetime` | post meta | event date/time (`Y-m-d H:i:s`) |
 | `_hcle_completed_modules` | user meta | completed modules (array) |
 | `_hcle_enrolled_programs` | user meta | enrolled programs (array) |
+| `_hcle_reminder_sent` | post meta (event) | event date a reminder was already sent for |
 | `_hcle_front_door` | post meta (page) | marks the "My Training" page |
 | `_hcle_demo` | post meta | marks sample content (seeder idempotency) |

@@ -70,6 +70,18 @@ function hcle_enroll_user( $program_id, $user_id ) {
 	if ( ! in_array( $program_id, $list, true ) ) {
 		$list[] = $program_id;
 		update_user_meta( $user_id, HCLE_ENROLLMENT_META, $list );
+
+		/**
+		 * Fires when a user is newly enrolled in a program.
+		 *
+		 * Only fires on a genuinely new enrollment (not when re-saving an
+		 * existing one). Used for the enrollment confirmation email and, later,
+		 * by the payment → enrollment bridge.
+		 *
+		 * @param int $program_id Program ID.
+		 * @param int $user_id    User ID.
+		 */
+		do_action( 'hcle_user_enrolled', $program_id, $user_id );
 	}
 	return true;
 }

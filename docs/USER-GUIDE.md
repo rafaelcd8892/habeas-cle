@@ -58,6 +58,16 @@ Only users with the **CLE Student** role appear in the list. The same table show
 
 > Instructors and administrators do **not** need enrollment: their content-management permission grants full access.
 
+### Automated emails
+
+- **Enrollment confirmation** — sent to a student when they are newly enrolled in
+  a program (with links to the program and their dashboard).
+- **Session reminders** — enrolled students automatically receive a reminder for
+  each live session in the 24 hours before it starts.
+
+> These use the site's mailer. On the production host, configure **SMTP** so the
+> emails actually deliver (WordPress alone often can't send reliably).
+
 ## The student experience
 
 1. Log in to the site.
