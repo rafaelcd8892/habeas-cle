@@ -39,6 +39,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and the proje
   For deploy verification and uptime monitoring.
 - **Deployment runbook** ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)) — Local →
   production steps and a go-live checklist.
+- The **"My Training" front-door page is auto-created on activation**
+  (`hcle_ensure_front_door_page()`), so a fresh install needs no CLI script;
+  adding it to the nav menu remains a one-time manual step.
 
 ## [0.1.0] — 2026-06-23
 

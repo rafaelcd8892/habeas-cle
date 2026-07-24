@@ -50,6 +50,7 @@ function hcle_activate() {
 	hcle_register_roles();          // defined in includes/roles.php
 	hcle_register_post_types();     // defined in includes/post-types.php
 	hcle_ensure_protected_dir();    // defined in includes/protected-files.php
+	hcle_ensure_front_door_page();  // defined in includes/blocks.php
 	hcle_schedule_reminder_cron();  // defined in includes/emails.php
 	flush_rewrite_rules();
 }

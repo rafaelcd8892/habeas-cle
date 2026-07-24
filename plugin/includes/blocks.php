@@ -85,6 +85,50 @@ function hcle_get_front_door_url() {
 }
 
 /**
+ * Ensures the "My Training" front-door page exists. Idempotent.
+ *
+ * Called on plugin activation so a fresh install has the dashboard page without
+ * needing the CLI setup script. (Adding it to the nav menu stays a manual step,
+ * since the theme's menu may not exist yet at activation.)
+ *
+ * @return int Page ID.
+ */
+function hcle_ensure_front_door_page() {
+	$existing = get_posts(
+		array(
+			'post_type'   => 'page',
+			'post_status' => 'any',
+			'numberposts' => 1,
+			'fields'      => 'ids',
+			'meta_key'    => '_hcle_front_door',
+			'meta_value'  => 1,
+		)
+	);
+	if ( $existing ) {
+		return (int) $existing[0];
+	}
+
+	$content = '<!-- wp:heading {"level":1} --><h1 class="wp-block-heading">My Training</h1><!-- /wp:heading -->'
+		. '<!-- wp:habeas-cle/my-programs /-->';
+
+	$page_id = wp_insert_post(
+		array(
+			'post_type'    => 'page',
+			'post_title'   => 'My Training',
+			'post_name'    => 'my-training',
+			'post_status'  => 'publish',
+			'post_content' => $content,
+		)
+	);
+
+	if ( $page_id && ! is_wp_error( $page_id ) ) {
+		update_post_meta( $page_id, '_hcle_front_door', 1 );
+		return (int) $page_id;
+	}
+	return 0;
+}
+
+/**
  * Render: breadcrumbs walking up the hierarchy to the current post.
  *
  * E.g.: My Training › Program › Week › Module (the last one without a link).
